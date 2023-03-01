@@ -1,0 +1,7 @@
+
+.DS_Store
+*.xml
+*.iml
+*.xml
+.idea/libraries/localsolver.xml
+.idea/misc.xml
