@@ -1,9 +1,0 @@
-<component name="libraryTable">
-  <library name="localsolver">
-    <CLASSES>
-      <root url="jar:///opt/localsolver_11_5/bin/localsolver.jar!/" />
-    </CLASSES>
-    <JAVADOC />
-    <SOURCES />
-  </library>
-</component>
