@@ -55,6 +55,9 @@ def main():
         corrected_signal[STATS] = calculate_statistics(corrected_signal)
         normalized_signal[STATS] = calculate_statistics(normalized_signal)
 
+    fit_results = {SIMPLE_FIT: fit_curve(normalized_signal, dataset_info, simple_model_equation),
+                   QUADRATIC_FIT: fit_curve(normalized_signal, dataset_info, quadratic_model_equation)}
+
 
 def get_dataset_info():
     output = {PATH: input("Enter path (or press enter for default): ") or DEFAULT_PATH,
@@ -177,6 +180,66 @@ def calculate_statistics(data):
     std_errors_mean = (std_devs_pop / np.sqrt(repeat_num)).tolist()
 
     return {AVERAGE_SIGNAL: averages, STD_DEV: std_devs_pop, STD_ERR: std_errors_mean}
+
+
+def simple_model_equation(lt, kd):
+    return lt / (kd + lt)
+
+
+def quadratic_model_equation(lt, kd, rt=1):
+    rl = ((rt + lt + kd) - np.sqrt(((rt + lt + kd) ** 2) - (4 * rt * lt))) / 2
+    return (lt - rl) / (kd + (lt - rl))
+
+
+def fit_curve(data, dataset_info, model):
+    x_data = np.array(data[CONC])
+    y_data = np.array(data[STATS][AVERAGE_SIGNAL])
+    df = dataset_info[NUM_REPEATS]
+
+    popt, pcov = curve_fit(model, x_data, y_data)
+    kd = popt[0]
+
+    perr = np.sqrt(np.diag(pcov))
+    se_a = perr[0]
+    alpha = 0.05
+    tcrit = t.ppf((1 - alpha / 2), df)
+    conf_int = kd + np.array([-1, 1]) * tcrit * se_a
+    std_dev = np.sqrt(df) * ((conf_int[1] - conf_int[0]) / (2 * tcrit))
+    std_err = std_dev / np.sqrt(df)
+
+    conf_int_formatted = [conf_int[0], conf_int[1]]
+
+    return {KD: kd, CONF_INT: conf_int_formatted, STD_DEV: std_dev, STD_ERR: std_err}
+
+
+def print_processed_data(data, dataset_info):
+    num_repeats = dataset_info[NUM_REPEATS]
+    print("L (nM)\tlog(L)\t", end="")
+    for i in range(num_repeats):
+        print(f"Rep {i + 1}\t", end="")
+    if num_repeats > 1:
+        print("Average\tStDev.P\tSEM\t", end="")
+    print("")
+
+    for row in range(dataset_info[NUM_DATAPOINTS]):
+        concentration = data[CONC][row]
+        log_concentration = np.log10(concentration)
+        print(f"{concentration}\t{log_concentration}\t", end="")
+
+        for col in range(1, num_repeats + 1):
+            print(f"{data[SIGNAL_VALUES][col][row]}\t", end="")
+
+        if num_repeats > 1:
+            print(f"{data[STATS][AVERAGE_SIGNAL][row]}\t{data[STATS][STD_DEV][row]}\t{data[STATS][STD_ERR][row]}\t",
+                  end="")
+
+        print("")
+
+
+def print_curve_fit(data):
+    print(
+        f"KD\t{data[KD]}\n95% CI\t{data[CONF_INT][0]}\t{data[CONF_INT][1]}\nStd dev\t{data[STD_DEV]}\nStd err\t{data[STD_ERR]}\t")
+    print("")
 
 
 main()
