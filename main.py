@@ -1,17 +1,16 @@
 import csv
 import os
 import time
-
 import numpy as np  # need to install
 import openpyxl  # need to install
 import openpyxl.chart.label
 import pandas as pd  # need to install
-from openpyxl.chart import (
-    ScatterChart,
-    Reference,
-    Series,
-)
+
+from openpyxl.chart import ScatterChart, Reference, Series
+from openpyxl.chart.data_source import NumDataSource, NumRef
+from openpyxl.chart.error_bar import ErrorBars
 from openpyxl.chart.marker import Marker
+from openpyxl.chart.series_factory import SeriesFactory
 from scipy.optimize import curve_fit  # need to install
 from scipy.stats import t
 
@@ -36,8 +35,6 @@ STD_ERR = "standard error"
 SIMPLE_MODEL = "simple model"
 QUADRATIC_MODEL = "quadratic model"
 KD = "binding constant"
-SIMPLE_FIT = "statistics of simple fit model"
-QUADRATIC_FIT = "statistics of quadratic fit model"
 CONF_INT = "confidence interval"
 CONF_INT_LOWER = "ci lower bound"
 CONF_INT_UPPER = "ci upper bound"
@@ -242,11 +239,10 @@ def output_results(dataset_info, data_corrected, data_normalized, fit):
 
     # add a plot of log(concentration) vs. normalized signal
     plot_worksheet = writer.sheets["normalized"]
-    chart = create_chart(plot_worksheet)
     fitted_curve_datapoints = calculate_fitted_curve_datapoints(data_normalized, fit)
     df_fitted_data = pd.DataFrame(data=fitted_curve_datapoints)
     df_fitted_data.to_excel(writer, sheet_name="normalized", index=False, startcol=26)
-    # chart = add_fitted_curve_to_chart(plot_worksheet, chart, fitted_curve_datapoints)
+    chart = create_chart(plot_worksheet)
     plot_worksheet.add_chart(chart, "I2")
 
     # add unnormalized data to the same file but in a different worksheet
@@ -264,10 +260,10 @@ def create_workbook(path):
     # if a directory was provided as input, the output name will have the name of the directory
     if path.endswith(".csv"):
         root, extension = os.path.splitext(path)
-        filename = f"{root}{filename_suffix}.xlsx"
+        filename = f"{root}_{filename_suffix}.xlsx"
     else:
         parent_dir = os.path.basename(path)
-        filename = f"{path}/{parent_dir}{filename_suffix}.xlsx"
+        filename = f"{path}/{parent_dir}_{filename_suffix}.xlsx"
 
     # open a new workbook and rename the default worksheet name
     workbook = openpyxl.Workbook()
@@ -306,6 +302,7 @@ def create_fit_DataFrame(fit_data):
 
 
 def create_chart(worksheet):
+    # initialize a chart object, set size, remove legend
     chart = ScatterChart()
     chart.height = 15.24
     chart.width = 22.86
@@ -322,19 +319,36 @@ def create_chart(worksheet):
     # y-axis settings
     chart.x_axis.title = "[Ligand] nM"
     chart.x_axis.majorTickMark = "in"
-    chart.x_axis.crosses = 'min'
+    chart.x_axis.crosses = "min"
 
-    # sets chart values
+    # plot experimental curve as a scatter plot showing only markers
     col, row_start, row_end = find_column_row(worksheet, LOG_CONC)
     x_values = Reference(worksheet, min_col=col, min_row=row_start, max_row=row_end)
     col, row_start, row_end = find_column_row(worksheet, AVERAGE_SIGNAL)
     y_values = Reference(worksheet, min_col=col, min_row=row_start, max_row=row_end)
-    series = Series(values=y_values, xvalues=x_values)
-    series.marker = Marker(size=10, symbol="circle")
+    series = SeriesFactory(y_values, x_values)
+    series.errBars = get_error_bars(worksheet)
+    series.marker = Marker(size=15, symbol="circle")
     series.graphicalProperties.line.noFill = True
     chart.series.append(series)
 
+    # plot fitted curve as a smooth line
+    col, row_start, row_end = find_column_row(worksheet, CALC_X)
+    x_values = Reference(worksheet, min_col=col, min_row=row_start, max_row=row_end)
+    col, min_row, max_row = find_column_row(worksheet, CALC_Y)
+    y_values = Reference(worksheet, min_col=col, min_row=row_start, max_row=row_end)
+
+    # curve = ScatterChart()
+    series = Series(values=y_values, xvalues=x_values)
+    chart.series.append(series)
+
     return chart
+
+
+def get_error_bars(worksheet):
+    col, row_start, row_end = find_column_row(worksheet, STD_DEV)
+    nds = NumDataSource(NumRef(Reference(worksheet, min_col=col, min_row=row_start, max_row=row_end)))
+    return ErrorBars(plus=nds, minus=nds, errDir="y", errValType="stdDev")
 
 
 def find_column_row(worksheet, column_name):
@@ -372,15 +386,6 @@ def calculate_fitted_curve_datapoints(data, fit):
         current_x *= 0.9
 
     return {CALC_X: fit_x_values, CALC_Y: fit_y_values}
-
-
-def add_fitted_curve_to_chart(worksheet, chart, datapoints):
-    col, row_start, row_end = find_column_row(worksheet, CALC_X)
-    x_values = Reference(worksheet, min_col=col, min_row=row_start, max_row=row_end)
-    min_col, min_row, max_row = find_column_row(worksheet, CALC_Y)
-    y_values = Reference(worksheet, min_col=col, min_row=row_start, max_row=row_end)
-
-    return chart
 
 
 main()
