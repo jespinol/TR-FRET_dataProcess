@@ -1,9 +1,19 @@
-import os
 import csv
+import os
+import time
+
 import numpy as np  # need to install
+import openpyxl  # need to install
+import openpyxl.chart.label
+import pandas as pd  # need to install
+from openpyxl.chart import (
+    ScatterChart,
+    Reference,
+    Series,
+)
+from openpyxl.chart.marker import Marker
 from scipy.optimize import curve_fit  # need to install
 from scipy.stats import t
-import pandas as pd  # need to install
 
 DEFAULT_PATH = "/Users/jespinol/Downloads/TR-FRET/trfret_data"
 PATH = "path to file(s)"
@@ -23,9 +33,9 @@ AVERAGE_SIGNAL = "average signal"
 STD_DEV = "standard deviation"
 STD_ERR = "standard error"
 
-SIMPLE = "simple two-state binding model"
-QUADRATIC = "quadratic binding model"
-KD = 'binding constant'
+SIMPLE_MODEL = "simple model"
+QUADRATIC_MODEL = "quadratic model"
+KD = "binding constant"
 SIMPLE_FIT = "statistics of simple fit model"
 QUADRATIC_FIT = "statistics of quadratic fit model"
 CONF_INT = "confidence interval"
@@ -35,6 +45,10 @@ STD_DEV_FIT = "standard deviation"
 STD_ERR_FIT = "standard error"
 
 DATAFRAME_FORMAT = [LOG_CONC, SIGNAL_VALUES, STATS]
+
+SELECTED_MODEL = SIMPLE_MODEL
+CALC_X = "Calculated x"
+CALC_Y = "Calculated y"
 
 
 def main():
@@ -48,15 +62,17 @@ def main():
 
     dataset_info[NUM_REPEATS] = len(corrected_signal[SIGNAL_VALUES])
     dataset_info[NUM_DATAPOINTS] = len(next(iter(corrected_signal[SIGNAL_VALUES].values())))
+
     corrected_signal[CONC] = normalized_signal[CONC] = calculate_concentrations(dataset_info)
     corrected_signal[LOG_CONC] = normalized_signal[LOG_CONC] = convert_conc_log(corrected_signal[CONC])
 
-    if dataset_info[NUM_REPEATS] > 1:
-        corrected_signal[STATS] = calculate_statistics(corrected_signal)
-        normalized_signal[STATS] = calculate_statistics(normalized_signal)
+    corrected_signal[STATS] = calculate_statistics(corrected_signal)
+    normalized_signal[STATS] = calculate_statistics(normalized_signal)
 
-    fit_results = {SIMPLE_FIT: fit_curve(normalized_signal, dataset_info, simple_model_equation),
-                   QUADRATIC_FIT: fit_curve(normalized_signal, dataset_info, quadratic_model_equation)}
+    fit_results = {SIMPLE_MODEL: fit_curve(normalized_signal, dataset_info, simple_model_equation),
+                   QUADRATIC_MODEL: fit_curve(normalized_signal, dataset_info, quadratic_model_equation)}
+
+    output_results(dataset_info, corrected_signal, normalized_signal, fit_results)
 
 
 def get_dataset_info():
@@ -170,12 +186,12 @@ def convert_conc_log(array_of_concentrations):
 def calculate_statistics(data):
     repeat_num = len(data[SIGNAL_VALUES])
     datapoint_num = len(next(iter(data[SIGNAL_VALUES].values())))
-    values = np.zeros((repeat_num, datapoint_num))
 
+    values = np.zeros((repeat_num, datapoint_num))
     for i in range(repeat_num):
         values[i, :] = np.array(data[SIGNAL_VALUES][i + 1])
-
     averages = (np.mean(values, axis=0)).tolist()
+
     std_devs_pop = (np.std(values, axis=0, ddof=0)).tolist()
     std_errors_mean = (std_devs_pop / np.sqrt(repeat_num)).tolist()
 
@@ -207,39 +223,164 @@ def fit_curve(data, dataset_info, model):
     std_dev = np.sqrt(df) * ((conf_int[1] - conf_int[0]) / (2 * tcrit))
     std_err = std_dev / np.sqrt(df)
 
-    conf_int_formatted = [conf_int[0], conf_int[1]]
-
-    return {KD: kd, CONF_INT: conf_int_formatted, STD_DEV: std_dev, STD_ERR: std_err}
+    return {KD: kd, CONF_INT_LOWER: conf_int[0], CONF_INT_UPPER: conf_int[1], STD_DEV: std_dev, STD_ERR: std_err}
 
 
-def print_processed_data(data, dataset_info):
-    num_repeats = dataset_info[NUM_REPEATS]
-    print("L (nM)\tlog(L)\t", end="")
-    for i in range(num_repeats):
-        print(f"Rep {i + 1}\t", end="")
-    if num_repeats > 1:
-        print("Average\tStDev.P\tSEM\t", end="")
-    print("")
+def output_results(dataset_info, data_corrected, data_normalized, fit):
+    path = dataset_info[PATH]
+    filename = create_workbook(path)
 
-    for row in range(dataset_info[NUM_DATAPOINTS]):
-        concentration = data[CONC][row]
-        log_concentration = np.log10(concentration)
-        print(f"{concentration}\t{log_concentration}\t", end="")
+    writer = pd.ExcelWriter(filename, engine="openpyxl", mode="a", if_sheet_exists="overlay")
 
-        for col in range(1, num_repeats + 1):
-            print(f"{data[SIGNAL_VALUES][col][row]}\t", end="")
+    # add normalized data to the output file
+    df_normalized = create_signal_DataFrame(data_normalized)
+    df_normalized.to_excel(writer, sheet_name="normalized", index=False)
 
-        if num_repeats > 1:
-            print(f"{data[STATS][AVERAGE_SIGNAL][row]}\t{data[STATS][STD_DEV][row]}\t{data[STATS][STD_ERR][row]}\t",
-                  end="")
+    # add curve fitting data
+    df_fit = create_fit_DataFrame(fit)
+    df_fit.to_excel(writer, sheet_name="normalized", index=False, startrow=dataset_info[NUM_DATAPOINTS] + 5)
 
-        print("")
+    # add a plot of log(concentration) vs. normalized signal
+    plot_worksheet = writer.sheets["normalized"]
+    chart = create_chart(plot_worksheet)
+    fitted_curve_datapoints = calculate_fitted_curve_datapoints(data_normalized, fit)
+    df_fitted_data = pd.DataFrame(data=fitted_curve_datapoints)
+    df_fitted_data.to_excel(writer, sheet_name="normalized", index=False, startcol=26)
+    # chart = add_fitted_curve_to_chart(plot_worksheet, chart, fitted_curve_datapoints)
+    plot_worksheet.add_chart(chart, "I2")
+
+    # add unnormalized data to the same file but in a different worksheet
+    df_corrected = create_signal_DataFrame(data_corrected)
+    df_corrected.to_excel(writer, sheet_name="unnormalized", index=False)
+
+    writer.close()
 
 
-def print_curve_fit(data):
-    print(
-        f"KD\t{data[KD]}\n95% CI\t{data[CONF_INT][0]}\t{data[CONF_INT][1]}\nStd dev\t{data[STD_DEV]}\nStd err\t{data[STD_ERR]}\t")
-    print("")
+def create_workbook(path):
+    # add a suffix with the current time so the file will always be unique
+    filename_suffix = time.strftime("%Y%m%d-%H%M%S")
+
+    # if a single input file was provided, output will have the same filename with xlsx extension
+    # if a directory was provided as input, the output name will have the name of the directory
+    if path.endswith(".csv"):
+        root, extension = os.path.splitext(path)
+        filename = f"{root}{filename_suffix}.xlsx"
+    else:
+        parent_dir = os.path.basename(path)
+        filename = f"{path}/{parent_dir}{filename_suffix}.xlsx"
+
+    # open a new workbook and rename the default worksheet name
+    workbook = openpyxl.Workbook()
+    workbook["Sheet"].title = "normalized"
+    workbook.save(filename)
+
+    # returns the path to the output file so that ExcelWriter and other writing functions can find it
+    return filename
+
+
+def create_signal_DataFrame(data):
+    df_dict = {}
+    for column in DATAFRAME_FORMAT:
+        if column == SIGNAL_VALUES:
+            for repeat in data[column]:
+                label = f"repeat {repeat}"
+                df_dict[label] = data[column][repeat]
+        elif column == STATS:
+            for stat in data[column]:
+                df_dict[stat] = data[column][stat]
+        else:
+            df_dict[column] = data[column]
+
+    df_dict = {**{CONC: data[CONC]}, **df_dict}
+
+    return pd.DataFrame(df_dict)
+
+
+def create_fit_DataFrame(fit_data):
+    df = pd.DataFrame(fit_data)
+    df = df.transpose()
+    df.index.name = "model"
+    df.reset_index(inplace=True)
+    df.rename(columns={"index": "Parameter"}, inplace=True)
+    return df
+
+
+def create_chart(worksheet):
+    chart = ScatterChart()
+    chart.height = 15.24
+    chart.width = 22.86
+    chart.legend = None
+
+    # x-axis settings
+    chart.y_axis.majorGridlines = None
+    chart.y_axis.title = "Normalized Signal"
+    chart.y_axis.majorTickMark = "in"
+    chart.y_axis.scaling.max = 1.1
+    chart.y_axis.scaling.min = -0.1
+    chart.x_axis.majorGridlines = None
+
+    # y-axis settings
+    chart.x_axis.title = "[Ligand] nM"
+    chart.x_axis.majorTickMark = "in"
+    chart.x_axis.crosses = 'min'
+
+    # sets chart values
+    col, row_start, row_end = find_column_row(worksheet, LOG_CONC)
+    x_values = Reference(worksheet, min_col=col, min_row=row_start, max_row=row_end)
+    col, row_start, row_end = find_column_row(worksheet, AVERAGE_SIGNAL)
+    y_values = Reference(worksheet, min_col=col, min_row=row_start, max_row=row_end)
+    series = Series(values=y_values, xvalues=x_values)
+    series.marker = Marker(size=10, symbol="circle")
+    series.graphicalProperties.line.noFill = True
+    chart.series.append(series)
+
+    return chart
+
+
+def find_column_row(worksheet, column_name):
+    col, row_start, row_end = 0, 2, 0
+    for column_cell in worksheet.columns:
+        col += 1
+        if column_cell[0].value == column_name:
+            for column_row in worksheet.iter_cols(min_row=1, min_col=col, max_col=col):
+                for cell in column_row:
+                    if cell.value is not None:
+                        row_end += 1
+                    else:
+                        break
+            break
+
+    return col, row_start, row_end
+
+
+def calculate_fitted_curve_datapoints(data, fit):
+    max_concentration = data[CONC][0] * 1.1
+    min_concentration = data[CONC][-1] * 0.9
+    kd = fit[SELECTED_MODEL][KD]
+
+    if SELECTED_MODEL == SIMPLE_MODEL:
+        model_equation = simple_model_equation
+    else:
+        model_equation = quadratic_model_equation
+
+    fit_x_values = []
+    fit_y_values = []
+    current_x = max_concentration
+    while current_x > min_concentration:
+        fit_x_values.append(np.log10(current_x))
+        fit_y_values.append(model_equation(current_x, kd))
+        current_x *= 0.9
+
+    return {CALC_X: fit_x_values, CALC_Y: fit_y_values}
+
+
+def add_fitted_curve_to_chart(worksheet, chart, datapoints):
+    col, row_start, row_end = find_column_row(worksheet, CALC_X)
+    x_values = Reference(worksheet, min_col=col, min_row=row_start, max_row=row_end)
+    min_col, min_row, max_row = find_column_row(worksheet, CALC_Y)
+    y_values = Reference(worksheet, min_col=col, min_row=row_start, max_row=row_end)
+
+    return chart
 
 
 main()
