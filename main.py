@@ -348,7 +348,7 @@ def create_chart(worksheet):
 def get_error_bars(worksheet):
     col, row_start, row_end = find_column_row(worksheet, STD_DEV)
     nds = NumDataSource(NumRef(Reference(worksheet, min_col=col, min_row=row_start, max_row=row_end)))
-    return ErrorBars(plus=nds, minus=nds, errDir="y", errValType="stdDev")
+    return ErrorBars(plus=nds, minus=nds, errDir="y", errValType="cust")
 
 
 def find_column_row(worksheet, column_name):
