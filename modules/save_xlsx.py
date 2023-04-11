@@ -16,25 +16,29 @@ def output_results(dataset_info, data_corrected, data_normalized, fit):
 
     # add normalized data to the output file
     df_normalized = create_signal_DataFrame(data_normalized)
-    df_normalized.to_excel(writer, sheet_name="normalized", index=False)
+    df_normalized.to_excel(writer, sheet_name=NORMALIZED_WS, index=False)
 
     # add curve fitting data
     df_fit = create_fit_DataFrame(fit)
-    df_fit.to_excel(writer, sheet_name="normalized", index=False, startrow=dataset_info[NUM_DATAPOINTS] + 5)
+    df_fit.to_excel(writer, sheet_name=NORMALIZED_WS, index=False, startrow=dataset_info[NUM_DATAPOINTS] + 5)
 
     # add theoretical data based on fit
     fitted_curve_datapoints = calculate_fitted_curve_datapoints(data_normalized, fit)
     df_fitted_data = pd.DataFrame(data=fitted_curve_datapoints)
-    df_fitted_data.to_excel(writer, sheet_name="normalized", index=False, startcol=26)
+    df_fitted_data.to_excel(writer, sheet_name=NORMALIZED_WS, index=False, startcol=26)
+
+    # add helper series for chart x-axis labels
+    df_helper_data = pd.DataFrame(data={HELPER_X: [0, 1, 2, 3, 4], HELPER_Y: [0, 0, 0, 0, 0]})
+    df_helper_data.to_excel(writer, sheet_name=NORMALIZED_WS, index=False, startcol=29)
 
     # add a plot of log(concentration) vs. normalized signal including the fitted curve
-    plot_worksheet = writer.sheets["normalized"]
+    plot_worksheet = writer.sheets[NORMALIZED_WS]
     chart = create_chart(plot_worksheet)
     plot_worksheet.add_chart(chart, "J2")
 
     # add unnormalized data to the same file but in a different worksheet
     df_corrected = create_signal_DataFrame(data_corrected)
-    df_corrected.to_excel(writer, sheet_name="unnormalized", index=False)
+    df_corrected.to_excel(writer, sheet_name=UNNORMALIZED_WS, index=False)
 
     writer.close()
     return
@@ -55,7 +59,7 @@ def create_workbook(path):
 
     # open a new workbook and rename the default worksheet name
     workbook = openpyxl.Workbook()
-    workbook["Sheet"].title = "normalized"
+    workbook["Sheet"].title = NORMALIZED_WS
 
     # increase the width of a number of columns
     resize_columns(workbook)
