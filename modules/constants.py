@@ -12,6 +12,7 @@ NUM_DATAPOINTS = "Number of datapoints per replicate"
 
 # constant names for values to be calculated
 CONC = "Concentration (nM)"
+CONC_REVERSE = "Conc in increasing order"
 LOG_CONC = "Log(concentration)"
 SIGNAL_VALUES = "Signal"
 STATS = "Statistics"
@@ -29,8 +30,12 @@ CONF_INT_UPPER = "CI upper bound"
 STD_DEV_FIT = "Standard deviation"
 STD_ERR_FIT = "Standard error"
 
-# constant names related to output file structure
+# constant names related to output file
+NORMALIZED_WS = "Normalized"
+UNNORMALIZED_WS = "Unnormalized"
 DATAFRAME_FORMAT = [LOG_CONC, SIGNAL_VALUES, STATS]
 SELECTED_MODEL = SIMPLE_MODEL
 CALC_X = "Calc x"
 CALC_Y = "Calc y"
+HELPER_X = "Helper x"
+HELPER_Y = "Helper y"
