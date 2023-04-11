@@ -48,7 +48,6 @@ def create_chart(worksheet):
     chart.x_axis.scaling.max = 4.0
     chart.x_axis.txPr = RichText(
         p=[Paragraph(pPr=ParagraphProperties(defRPr=axis_label_font), endParaRPr=axis_label_font)])
-    # chart.x_axis.number_format = "\\10^0;#"
     chart.x_axis.number_format = '"10"'
     chart.x_axis.majorUnit = 1.0
 
@@ -59,6 +58,7 @@ def create_chart(worksheet):
     y_values = Reference(worksheet, min_col=col, min_row=row_start, max_row=row_end)
     series = SeriesFactory(y_values, x_values)
     series.errBars = get_error_bars(worksheet)
+    series.errBars.spPr = GraphicalProperties(ln=LineProperties(w=25400))
     series.marker = Marker(size=20, symbol="circle")
     series.graphicalProperties.line.noFill = True
     chart.series.append(series)
