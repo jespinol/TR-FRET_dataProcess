@@ -41,13 +41,13 @@ TR-FRET dataProcess requires a specific format for the data. The data must be ar
 CSV file containing a dataset with 4 dilutions and a donor-only well. The blank row between emission at 615nM and
 emission at 665nM is essential. Note that only column A would be populated in the actual input file.
 
-![image](resources/CSV_file_example.png)
+<img src="resources/CSV_file_example.png" alt="" width="300" height="459">
 
 If the user arranges samples for data collection as shown in the following figure, the VICTOR Nivo plate reader can
 output a CSV file that already has the correct format. For data collected in this manner, choose "list format data only"
 as the data format and "csv" as the file format when exporting results.
 
-![image](resources/Plate_format_example.png)
+<img src="resources/Plate_format_example.png" alt="" width="300" height="408">
 
 ### License
 
