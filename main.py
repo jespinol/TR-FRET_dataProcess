@@ -79,24 +79,24 @@ def parse_dataset(path):
                     with open(os.path.join(path, file), "r") as f:
                         reader = csv.reader(f)
                         line = next(reader)
-                        raw_data["615"][len(raw_data["615"]) + 1] = parse_values(reader, line, True)
+                        raw_data["615"][len(raw_data["615"]) + 1] = parse_values(reader, line)
                         line = next(reader)
-                        raw_data["665"][len(raw_data["665"]) + 1] = parse_values(reader, line, False)
+                        raw_data["665"][len(raw_data["665"]) + 1] = parse_values(reader, line)
         # if not a directory, assume it is a file
         else:
             with open(path, "r") as file:
                 reader = csv.reader(file)
                 line = next(reader)
-                raw_data["615"][1] = parse_values(reader, line, True)
+                raw_data["615"][1] = parse_values(reader, line)
                 line = next(reader)
-                raw_data["665"][1] = parse_values(reader, line, False)
+                raw_data["665"][1] = parse_values(reader, line)
     except IOError:
         print("Input directory/file does not exist or does not contain a valid csv file.")
 
     return raw_data
 
 
-def parse_values(reader, line, is_first_half):
+def parse_values(reader, line):
     data_arr = []
     while line:
         data_arr.append(int(line[0]))
