@@ -1,7 +1,7 @@
 ## TR-FRET Binding Data Processor (TR-FRET dataProcess)
 
 TR-FRET dataProcess is a program designed to process raw TR-FRET data from nucleosome/protein or protein/protein binding
-experiments, as performed in Wesley <i>et al.</i> (Protein Science 2022).
+experiments, as performed in [Wesley <i>et al.</i> (Protein Science 2022)](https://doi.org/10.1002/pro.4339).
 
 The program takes in TR-FRET data, performs signal correction, and calculates the binding affinity of the dataset being
 tested, along with goodness-of-fit statistics. It outputs a xlsx file containing corrected data, curve fitting data,
@@ -38,8 +38,9 @@ the raw data.
 ### Raw Data Format
 
 TR-FRET dataProcess requires a specific format for the data. The data must be arranged as shown in the following example
-CSV file containing a dataset with 4 dilutions and a donor-only well. The blank row between emission at 615nM and
-emission at 665nM is essential. Note that only column A would be populated in the actual input file.
+CSV file containing a dataset with 4 dilutions and donor-only wells. The blank row between emission at 615nM and
+emission at 665nM is essential, and the blank rows at the end are ignored. Note that only column A would be populated in
+the actual input file.
 
 <img src="resources/CSV_file_example.png" alt="" width="300" height="459">
 
