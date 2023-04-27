@@ -26,13 +26,13 @@ def get_dataset_info():
 
     while True:
         try:
-            output[MAX_CONC] = int(
-                input("Enter [max] in mM (or press enter for '10mM'): ") or DEFAULT_MAX_CONC)
+            output[MAX_CONC] = float(
+                input("Enter [max] in mM (or press enter for '10'): ") or DEFAULT_MAX_CONC)
             break
         except ValueError:
             print("Invalid input type, please enter an integer value.")
 
-    output[CONC_REVERSE] = re.search(r"[yY]", input("Are the concentrations in increasing order? [y/Y] "))
+    output[CONC_REVERSE] = re.search(r"[yY]", input("Concentrations in increasing order? [y/Y for increasing] "))
 
     while True:
         try:
