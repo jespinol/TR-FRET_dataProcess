@@ -45,8 +45,8 @@ the actual input file.
 <img src="resources/CSV_file_example.png" alt="" width="300" height="459">
 
 If the user arranges samples for data collection as shown in the following figure, the VICTOR Nivo plate reader can
-output a CSV file that already has the correct format. For data collected in this manner, choose "list format data only"
-as the data format and "csv" as the file format when exporting results.
+output a CSV file that already has the correct format. For data collected in this manner, choose "CSV" as the export
+format and "List format - only results" as the export type when exporting results.
 
 <img src="resources/Plate_format_example.png" alt="" width="300" height="408">
 
