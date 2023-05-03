@@ -2,6 +2,7 @@ import csv
 import os
 import re
 
+import hillfit
 import numpy as np
 
 from modules.constants import *
@@ -65,7 +66,22 @@ def dataProcess(dataset_info):
 
     output_results(dataset_info, corrected_signal, normalized_signal, fit_results)
 
+    test_hill_fit(normalized_signal)
+
     return
+
+
+def test_hill_fit(data):
+    x = data[CONC]
+    y = data[STATS][AVERAGE_SIGNAL]
+    if x[0] > x[-1]:
+        x = x[::-1]
+        y = y[::-1]
+    hf = hillfit.HillFit(x, y)
+    hf.fitting()
+    print(hf.nH, hf.ec50)
+    print(hf.equation)
+    return hf.nH, hf.ec50
 
 
 def parse_dataset(path):
