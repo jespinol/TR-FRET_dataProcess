@@ -28,8 +28,8 @@ def create_chart(worksheet):
 
     # y-axis settings
     chart.y_axis.majorGridlines = None
-    chart.y_axis.majorTickMark = "out"
-    chart.y_axis.title = "Normalized Signal"
+    chart.y_axis.majorTickMark = "in"
+    chart.y_axis.title = "Fraction Bound"
     chart.y_axis.title.tx.rich.p[0].pPr.defRPr = axis_font
     chart.y_axis.scaling.min = 0.0
     chart.y_axis.scaling.max = 1.0
@@ -40,7 +40,7 @@ def create_chart(worksheet):
 
     # x-axis settings
     chart.x_axis.majorGridlines = None
-    chart.x_axis.majorTickMark = "out"
+    chart.x_axis.majorTickMark = "in"
     chart.x_axis.title = "[Ligand] nM"
     chart.x_axis.title.tx.rich.p[0].pPr.defRPr = axis_font
     chart.x_axis.crosses = "min"
@@ -59,7 +59,7 @@ def create_chart(worksheet):
     series = SeriesFactory(y_values, x_values)
     series.errBars = get_error_bars(worksheet)
     series.errBars.spPr = GraphicalProperties(ln=LineProperties(w=25400))
-    series.marker = Marker(size=20, symbol="circle")
+    series.marker = Marker(size=15, symbol="circle")
     series.graphicalProperties.line.noFill = True
     chart.series.append(series)
 
