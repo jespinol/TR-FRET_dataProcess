@@ -1,20 +1,10 @@
-import numpy as np
 from scipy.optimize import curve_fit
 from scipy.stats import t
 
 from modules.constants import *
 
 
-def simple_model_equation(lt, kd):
-    return lt / (kd + lt)
-
-
-def quadratic_model_equation(lt, kd, rt=1):
-    rl = ((rt + lt + kd) - np.sqrt(((rt + lt + kd) ** 2) - (4 * rt * lt))) / 2
-    return (lt - rl) / (kd + (lt - rl))
-
-
-def fit_curve(data, dataset_info, model):
+def fit_curve(dataset_info, data, model):
     x_data = np.array(data[CONC])
     y_data = np.array(data[STATS][AVERAGE_SIGNAL])
     df = dataset_info[NUM_REPEATS]
@@ -23,6 +13,13 @@ def fit_curve(data, dataset_info, model):
     kd = popt[0]
 
     conf_int_low, conf_int_hi, std_dev, std_err = calculate_statistics_from_fit(kd, pcov, df)
+
+    if model == hill_equation:
+        nH = popt[1]
+        bottom = popt[2]
+        top = popt[3]
+        return {KD: kd, NH: nH, BOTTOM: bottom, TOP: top, CONF_INT_LOWER: conf_int_low, CONF_INT_UPPER: conf_int_hi,
+                STD_DEV: std_dev, STD_ERR: std_err}
 
     return {KD: kd, CONF_INT_LOWER: conf_int_low, CONF_INT_UPPER: conf_int_hi, STD_DEV: std_dev, STD_ERR: std_err}
 
