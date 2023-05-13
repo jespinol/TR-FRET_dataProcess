@@ -3,7 +3,5 @@
 *.xml
 *.iml
 *.xml
-.idea/libraries/localsolver.xml
-.idea/misc.xml
-.idea/libraries/localsolver115.xml
+.idea/
 dataProcess.iml
