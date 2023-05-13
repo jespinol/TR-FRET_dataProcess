@@ -1,13 +1,8 @@
 import csv
-import os
 import re
 
-import hillfit
-import numpy as np
-
-from modules.constants import *
-from modules.curve_fitting import fit_curve, simple_model_equation, quadratic_model_equation
-from modules.save_xlsx import output_results
+from modules.curve_fitting import *
+from modules.save_xlsx import *
 
 
 def main():
@@ -58,30 +53,15 @@ def dataProcess(dataset_info):
     corrected_signal[CONC] = normalized_signal[CONC] = calculate_concentrations(dataset_info)
     corrected_signal[LOG_CONC] = normalized_signal[LOG_CONC] = convert_conc_to_log(corrected_signal[CONC])
 
-    corrected_signal[STATS] = calculate_statistics(corrected_signal)
-    normalized_signal[STATS] = calculate_statistics(normalized_signal)
+    corrected_signal[STATS] = calculate_signal_statistics(corrected_signal)
+    normalized_signal[STATS] = calculate_signal_statistics(normalized_signal)
 
-    fit_results = {SIMPLE_MODEL: fit_curve(normalized_signal, dataset_info, simple_model_equation),
-                   QUADRATIC_MODEL: fit_curve(normalized_signal, dataset_info, quadratic_model_equation)}
-
+    fit_results = {SIMPLE_MODEL: fit_curve(dataset_info, normalized_signal, simple_model_equation),
+                   QUADRATIC_MODEL: fit_curve(dataset_info, normalized_signal, quadratic_model_equation),
+                   COOPERATIVE_MODEL: fit_curve(dataset_info, normalized_signal, hill_equation)}
     output_results(dataset_info, corrected_signal, normalized_signal, fit_results)
 
-    test_hill_fit(normalized_signal)
-
     return
-
-
-def test_hill_fit(data):
-    x = data[CONC]
-    y = data[STATS][AVERAGE_SIGNAL]
-    if x[0] > x[-1]:
-        x = x[::-1]
-        y = y[::-1]
-    hf = hillfit.HillFit(x, y)
-    hf.fitting()
-    print(hf.nH, hf.ec50)
-    print(hf.equation)
-    return hf.nH, hf.ec50
 
 
 def parse_dataset(path):
@@ -92,27 +72,27 @@ def parse_dataset(path):
             directory_files = os.listdir(path)
             for file in directory_files:
                 if file.endswith(".csv"):
-                    with open(os.path.join(path, file), "r") as f:
+                    with open(os.path.join(path, file), "r", encoding='utf-8-sig') as f:
                         reader = csv.reader(f)
                         line = next(reader)
-                        raw_data["615"][len(raw_data["615"]) + 1] = parse_values(reader, line)
+                        raw_data["615"][len(raw_data["615"]) + 1] = parse_values_from_file(reader, line)
                         line = next(reader)
-                        raw_data["665"][len(raw_data["665"]) + 1] = parse_values(reader, line)
+                        raw_data["665"][len(raw_data["665"]) + 1] = parse_values_from_file(reader, line)
         # if not a directory, assume it is a file
         else:
-            with open(path, "r") as file:
+            with open(path, "r", encoding='utf-8-sig') as file:
                 reader = csv.reader(file)
                 line = next(reader)
-                raw_data["615"][1] = parse_values(reader, line)
+                raw_data["615"][1] = parse_values_from_file(reader, line)
                 line = next(reader)
-                raw_data["665"][1] = parse_values(reader, line)
+                raw_data["665"][1] = parse_values_from_file(reader, line)
     except IOError:
         print("Input directory/file does not exist or does not contain a valid csv file.")
 
     return raw_data
 
 
-def parse_values(reader, line):
+def parse_values_from_file(reader, line):
     data_arr = []
     while line:
         data_arr.append(int(line[0]))
@@ -178,7 +158,7 @@ def convert_conc_to_log(array_of_concentrations):
     return output
 
 
-def calculate_statistics(data):
+def calculate_signal_statistics(data):
     repeat_num = len(data[SIGNAL_VALUES])
     datapoint_num = len(next(iter(data[SIGNAL_VALUES].values())))
 
