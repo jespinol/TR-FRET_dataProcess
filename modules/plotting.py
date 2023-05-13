@@ -1,4 +1,3 @@
-import numpy as np
 from openpyxl.chart import ScatterChart, Reference, Series
 from openpyxl.chart.data_source import NumDataSource, NumRef
 from openpyxl.chart.error_bar import ErrorBars
@@ -11,14 +10,13 @@ from openpyxl.drawing.line import LineProperties
 from openpyxl.drawing.text import Font, CharacterProperties, Paragraph, ParagraphProperties
 
 from modules.constants import *
-from modules.curve_fitting import simple_model_equation, quadratic_model_equation
 
 
-def create_chart(worksheet):
+def create_chart(worksheet, model):
     # initialize a chart object, set size, remove legend
     chart = ScatterChart()
-    chart.height = 15.24
-    chart.width = 22.86
+    chart.height = 13.97
+    chart.width = 20.96
     chart.legend = None
     chart.graphical_properties = GraphicalProperties(ln=LineProperties(noFill=True))
     font = Font(typeface="Calibri")
@@ -45,17 +43,14 @@ def create_chart(worksheet):
     chart.x_axis.title.tx.rich.p[0].pPr.defRPr = axis_font
     chart.x_axis.crosses = "min"
     chart.x_axis.scaling.min = 0.0
-    chart.x_axis.scaling.max = 4.0
+    chart.x_axis.scaling.max = 5.0
     chart.x_axis.txPr = RichText(
         p=[Paragraph(pPr=ParagraphProperties(defRPr=axis_label_font), endParaRPr=axis_label_font)])
     chart.x_axis.number_format = '"10"'
     chart.x_axis.majorUnit = 1.0
 
     # plot experimental curve as a scatter plot showing only markers
-    col, row_start, row_end = find_column_and_rows(worksheet, LOG_CONC)
-    x_values = Reference(worksheet, min_col=col, min_row=row_start, max_row=row_end)
-    col, row_start, row_end = find_column_and_rows(worksheet, AVERAGE_SIGNAL)
-    y_values = Reference(worksheet, min_col=col, min_row=row_start, max_row=row_end)
+    x_values, y_values = find_xy_values_in_worksheet(worksheet, LOG_CONC, AVERAGE_SIGNAL)
     series = SeriesFactory(y_values, x_values)
     series.errBars = get_error_bars(worksheet)
     series.errBars.spPr = GraphicalProperties(ln=LineProperties(w=25400))
@@ -64,22 +59,18 @@ def create_chart(worksheet):
     chart.series.append(series)
 
     # plot fitted curve as a smooth line
-    col, row_start, row_end = find_column_and_rows(worksheet, CALC_X)
-    x_values = Reference(worksheet, min_col=col, min_row=row_start, max_row=row_end)
-    col, min_row, max_row = find_column_and_rows(worksheet, CALC_Y)
-    y_values = Reference(worksheet, min_col=col, min_row=row_start, max_row=row_end)
+    x_label = f"x_{model}"
+    y_label = f"y_{model}"
+    x_values, y_values = find_xy_values_in_worksheet(worksheet, x_label, y_label)
     series = Series(values=y_values, xvalues=x_values)
     chart.series.append(series)
 
     # plot a helper column to display exponent in x-axis label
-    col, row_start, row_end = find_column_and_rows(worksheet, HELPER_X)
-    x_values = Reference(worksheet, min_col=col, min_row=row_start, max_row=row_end)
-    col, row_start, row_end = find_column_and_rows(worksheet, HELPER_Y)
-    y_values = Reference(worksheet, min_col=col, min_row=row_start, max_row=row_end)
+    x_values, y_values = find_xy_values_in_worksheet(worksheet, HELPER_X, HELPER_Y)
     series = SeriesFactory(y_values, x_values)
     series.graphicalProperties.line.noFill = True
     series.dLbls = DataLabelList()
-    for x in range(4 + 1):
+    for x in range(int(chart.x_axis.scaling.max) + 2):
         data_label = DataLabel(x)
         data_label.text = f"{x}"
         data_label.showCatName = True
@@ -94,14 +85,15 @@ def create_chart(worksheet):
     return chart
 
 
-def get_error_bars(worksheet):
-    col, row_start, row_end = find_column_and_rows(worksheet, STD_DEV)
-    nds = NumDataSource(NumRef(Reference(worksheet, min_col=col, min_row=row_start, max_row=row_end)))
+def find_xy_values_in_worksheet(worksheet, x_label, y_label):
+    col, row_start, row_end = find_coordinate_by_col_name(worksheet, x_label)
+    x_values = Reference(worksheet, min_col=col, min_row=row_start, max_row=row_end)
+    col, min_row, max_row = find_coordinate_by_col_name(worksheet, y_label)
+    y_values = Reference(worksheet, min_col=col, min_row=row_start, max_row=row_end)
+    return x_values, y_values
 
-    return ErrorBars(plus=nds, minus=nds, errDir="y", errValType="cust")
 
-
-def find_column_and_rows(worksheet, column_name):
+def find_coordinate_by_col_name(worksheet, column_name):
     col, row_start, row_end = 0, 2, 0
     for column_cell in worksheet.columns:
         col += 1
@@ -117,22 +109,8 @@ def find_column_and_rows(worksheet, column_name):
     return col, row_start, row_end
 
 
-def calculate_fitted_curve_datapoints(data, fit):
-    max_concentration = data[CONC][0] * 1.2
-    min_concentration = data[CONC][-1] * 0.8
-    kd = fit[SELECTED_MODEL][KD]
+def get_error_bars(worksheet):
+    col, row_start, row_end = find_coordinate_by_col_name(worksheet, STD_DEV)
+    nds = NumDataSource(NumRef(Reference(worksheet, min_col=col, min_row=row_start, max_row=row_end)))
 
-    if SELECTED_MODEL == SIMPLE_MODEL:
-        model_equation = simple_model_equation
-    else:
-        model_equation = quadratic_model_equation
-
-    fit_x_values = []
-    fit_y_values = []
-    current_x = max_concentration
-    while current_x > min_concentration:
-        fit_x_values.append(np.log10(current_x))
-        fit_y_values.append(model_equation(current_x, kd))
-        current_x *= 0.9
-
-    return {CALC_X: fit_x_values, CALC_Y: fit_y_values}
+    return ErrorBars(plus=nds, minus=nds, errDir="y", errValType="cust")
