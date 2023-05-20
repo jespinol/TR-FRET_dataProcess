@@ -3,6 +3,7 @@ import re
 
 from modules.curve_fitting import *
 from modules.save_xlsx import *
+import pandas as pd
 
 
 def main():
@@ -42,7 +43,7 @@ def get_dataset_info():
 
 
 def dataProcess(dataset_info):
-    raw_signal = parse_dataset(dataset_info[PATH])
+    raw_signal = _parse_dataset(dataset_info[PATH])
 
     corrected_signal = {SIGNAL_VALUES: format_raw_signal(raw_signal)}
     normalized_signal = {SIGNAL_VALUES: normalize_signal(corrected_signal)}
@@ -61,10 +62,24 @@ def dataProcess(dataset_info):
                    COOPERATIVE_MODEL: fit_curve(dataset_info, normalized_signal, hill_equation)}
     output_results(dataset_info, corrected_signal, normalized_signal, fit_results)
 
+    # parse_dataset(dataset_info[PATH])
+
     return
 
 
 def parse_dataset(path):
+    if os.path.isdir(path):
+        for root, dirs, files in os.walk(path):
+            for file in files:
+                file_path = os.path.join(root, file)
+                if file_path.endswith(".csv"):
+                    print("file")
+                    print(pd.read_csv(file_path, header=None))
+    else:
+        print(pd.read_csv(path, header=None))
+
+
+def _parse_dataset(path):
     raw_data = {"615": {}, "665": {}}
     try:
         # check if input is a directory
