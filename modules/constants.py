@@ -1,8 +1,11 @@
 import numpy as np
 
 # input file constant names and default values
-DEFAULT_PATH = "/Users/jespinol/Downloads/TR-FRET/trfret_data"
+DEFAULT_PATH = "/Users/jespinol/Downloads/TR-FRET/pd/c.csv"
 PATH = "Path to file(s)"
+PLATE_FORMAT = "Plate format"
+COLUMN_PLATE_FORMAT = "Columns"
+ROW_PLATE_FORMAT = "Rows"
 DEFAULT_MAX_CONC = 10
 MAX_CONC = "Maximum concentration (µM)"
 DEFAULT_DIL_FACTOR = 2
