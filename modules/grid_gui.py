@@ -97,5 +97,5 @@ class GridGUI:
 
 # Create the grid and run the GUI
 grid = Grid(16, 24)
-grid.populate_from_csv('/Users/jespinol/Downloads/TR-FRET/gui/c_small_1.csv')  # read grid cells from csv
+grid.populate_from_csv('/Users/jespinol/Downloads/TR-FRET/gui/c.csv')  # read grid cells from csv
 GridGUI(grid).run()
