@@ -15,7 +15,9 @@ def main():
 
 def get_dataset_info():
     output = {PATH: input("Enter path or 'q' to exit: ") or DEFAULT_PATH,
+              PLATE_FORMAT: COLUMN_PLATE_FORMAT,
               MAX_CONC: 0,
+              CONC_REVERSE: False,
               DIL_FACTOR: 0}
 
     if output[PATH] == "q":
@@ -29,7 +31,11 @@ def get_dataset_info():
         except ValueError:
             print("Invalid input type, please enter an integer value.")
 
-    output[CONC_REVERSE] = re.search(r"[yY]", input("Concentrations in increasing order? [y/Y for increasing] "))
+    if re.search(r"[yY]", input("Concentrations NOT in decreasing order? [y/Y for increasing] ")):
+        output[CONC_REVERSE] = True
+
+    if re.search(r"[yY]", input("Samples NOT in column format? [y/Y for row format] ")):
+        output[PLATE_FORMAT] = ROW_PLATE_FORMAT
 
     while True:
         try:
@@ -43,40 +49,70 @@ def get_dataset_info():
 
 
 def dataProcess(dataset_info):
-    raw_signal = _parse_dataset(dataset_info[PATH])
+    # raw_signal = _parse_dataset(dataset_info[PATH])
+    #
+    # corrected_signal = {SIGNAL_VALUES: _format_raw_signal(raw_signal)}
+    # normalized_signal = {SIGNAL_VALUES: normalize_signal(corrected_signal)}
+    #
+    # dataset_info[NUM_REPEATS] = len(corrected_signal[SIGNAL_VALUES])
+    # dataset_info[NUM_DATAPOINTS] = len(next(iter(corrected_signal[SIGNAL_VALUES].values())))
+    #
+    # corrected_signal[CONC] = normalized_signal[CONC] = calculate_concentrations(dataset_info)
+    # corrected_signal[LOG_CONC] = normalized_signal[LOG_CONC] = convert_conc_to_log(corrected_signal[CONC])
+    #
+    # corrected_signal[STATS] = calculate_signal_statistics(corrected_signal)
+    # normalized_signal[STATS] = calculate_signal_statistics(normalized_signal)
+    #
+    # fit_results = {SIMPLE_MODEL: fit_curve(dataset_info, normalized_signal, simple_model_equation),
+    #                QUADRATIC_MODEL: fit_curve(dataset_info, normalized_signal, quadratic_model_equation),
+    #                COOPERATIVE_MODEL: fit_curve(dataset_info, normalized_signal, hill_equation)}
+    # output_results(dataset_info, corrected_signal, normalized_signal, fit_results)
 
-    corrected_signal = {SIGNAL_VALUES: format_raw_signal(raw_signal)}
-    normalized_signal = {SIGNAL_VALUES: normalize_signal(corrected_signal)}
-
-    dataset_info[NUM_REPEATS] = len(corrected_signal[SIGNAL_VALUES])
-    dataset_info[NUM_DATAPOINTS] = len(next(iter(corrected_signal[SIGNAL_VALUES].values())))
-
-    corrected_signal[CONC] = normalized_signal[CONC] = calculate_concentrations(dataset_info)
-    corrected_signal[LOG_CONC] = normalized_signal[LOG_CONC] = convert_conc_to_log(corrected_signal[CONC])
-
-    corrected_signal[STATS] = calculate_signal_statistics(corrected_signal)
-    normalized_signal[STATS] = calculate_signal_statistics(normalized_signal)
-
-    fit_results = {SIMPLE_MODEL: fit_curve(dataset_info, normalized_signal, simple_model_equation),
-                   QUADRATIC_MODEL: fit_curve(dataset_info, normalized_signal, quadratic_model_equation),
-                   COOPERATIVE_MODEL: fit_curve(dataset_info, normalized_signal, hill_equation)}
-    output_results(dataset_info, corrected_signal, normalized_signal, fit_results)
-
-    # parse_dataset(dataset_info[PATH])
+    input_data_as_df = parse_dataset(dataset_info)
+    print(input_data_as_df[0])
+    # raw_data = format_raw_signal(input_data_as_df)
 
     return
 
 
-def parse_dataset(path):
+def parse_dataset(dataset_info):
+    path = dataset_info[PATH]
+    plate_format = dataset_info[PLATE_FORMAT]
+    dfs = []
     if os.path.isdir(path):
         for root, dirs, files in os.walk(path):
             for file in files:
                 file_path = os.path.join(root, file)
                 if file_path.endswith(".csv"):
-                    print("file")
-                    print(pd.read_csv(file_path, header=None))
+                    dfs.append(pd.read_csv(file_path, header=None, skip_blank_lines=False))
     else:
-        print(pd.read_csv(path, header=None))
+        dfs.append(pd.read_csv(path, header=None, skip_blank_lines=False))
+
+    if plate_format == ROW_PLATE_FORMAT:
+        for i in range(0, len(dfs)):
+            dfs[i] = dfs[i].transpose()
+
+    return dfs
+
+
+def format_raw_signal(dfs):
+    for df in dfs:
+        # print(df)
+        # print(df.iat[3, 32] > 0)
+        for col in df:
+            if df[col].any():
+                print("*** col ***")
+                for row in df[col]:
+                    print(row > 0)
+    return 0
+
+
+def _format_raw_signal(data):
+    output = {}
+    for i in range(1, len(data["665"]) + 1):
+        output[i] = correct_signal(data["615"][i], data["665"][i])
+
+    return output
 
 
 def _parse_dataset(path):
@@ -114,14 +150,6 @@ def parse_values_from_file(reader, line):
         line = next(reader, None)
 
     return data_arr
-
-
-def format_raw_signal(data):
-    output = {}
-    for i in range(1, len(data["665"]) + 1):
-        output[i] = correct_signal(data["615"][i], data["665"][i])
-
-    return output
 
 
 def correct_signal(data_615, data_665):
