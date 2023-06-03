@@ -49,28 +49,33 @@ def get_dataset_info():
 
 
 def dataProcess(dataset_info):
-    # raw_signal = _parse_dataset(dataset_info[PATH])
-    #
-    # corrected_signal = {SIGNAL_VALUES: _format_raw_signal(raw_signal)}
-    # normalized_signal = {SIGNAL_VALUES: normalize_signal(corrected_signal)}
-    #
-    # dataset_info[NUM_REPEATS] = len(corrected_signal[SIGNAL_VALUES])
-    # dataset_info[NUM_DATAPOINTS] = len(next(iter(corrected_signal[SIGNAL_VALUES].values())))
-    #
-    # corrected_signal[CONC] = normalized_signal[CONC] = calculate_concentrations(dataset_info)
-    # corrected_signal[LOG_CONC] = normalized_signal[LOG_CONC] = convert_conc_to_log(corrected_signal[CONC])
-    #
-    # corrected_signal[STATS] = calculate_signal_statistics(corrected_signal)
-    # normalized_signal[STATS] = calculate_signal_statistics(normalized_signal)
-    #
-    # fit_results = {SIMPLE_MODEL: fit_curve(dataset_info, normalized_signal, simple_model_equation),
-    #                QUADRATIC_MODEL: fit_curve(dataset_info, normalized_signal, quadratic_model_equation),
-    #                COOPERATIVE_MODEL: fit_curve(dataset_info, normalized_signal, hill_equation)}
-    # output_results(dataset_info, corrected_signal, normalized_signal, fit_results)
-
     input_data_as_df = parse_dataset(dataset_info)
-    print(input_data_as_df[0])
-    # raw_data = format_raw_signal(input_data_as_df)
+    raw_data = format_raw_signal(input_data_as_df)
+    corrected_signal = {SIGNAL_VALUES: {}}
+    for i in range(1, len(raw_data["615"]) + 1):
+        corrected_data = correct_signal(raw_data["615"][i], raw_data["665"][i])
+        corrected_signal[SIGNAL_VALUES][i] = corrected_data
+
+    # raw_signal = _parse_dataset("/Users/jespinol/Library/Mobile Documents/com~apple~CloudDocs/coding/LabProjects/TR-FRET data process/dataProcess/resources/test_csv_desired.csv")
+    # print(raw_signal)
+    # corrected_signal = {SIGNAL_VALUES: _format_raw_signal(raw_signal)}
+    # print(corrected_signal)
+
+    normalized_signal = {SIGNAL_VALUES: normalize_signal(corrected_signal)}
+
+    dataset_info[NUM_REPEATS] = len(corrected_signal[SIGNAL_VALUES])
+    dataset_info[NUM_DATAPOINTS] = len(next(iter(corrected_signal[SIGNAL_VALUES].values())))
+
+    corrected_signal[CONC] = normalized_signal[CONC] = calculate_concentrations(dataset_info)
+    corrected_signal[LOG_CONC] = normalized_signal[LOG_CONC] = convert_conc_to_log(corrected_signal[CONC])
+
+    corrected_signal[STATS] = calculate_signal_statistics(corrected_signal)
+    normalized_signal[STATS] = calculate_signal_statistics(normalized_signal)
+
+    fit_results = {SIMPLE_MODEL: fit_curve(dataset_info, normalized_signal, simple_model_equation),
+                   QUADRATIC_MODEL: fit_curve(dataset_info, normalized_signal, quadratic_model_equation),
+                   COOPERATIVE_MODEL: fit_curve(dataset_info, normalized_signal, hill_equation)}
+    output_results(dataset_info, corrected_signal, normalized_signal, fit_results)
 
     return
 
@@ -96,15 +101,30 @@ def parse_dataset(dataset_info):
 
 
 def format_raw_signal(dfs):
+    output = {"615": {}, "665": {}}
+    repeat = 0
     for df in dfs:
-        # print(df)
-        # print(df.iat[3, 32] > 0)
+        print(df)
+        blank = pd.Series([""])
+        i0 = (df.iloc[0])
+        i1 = (df.iloc[1])
+        i4 = (df.iloc[4])
+        i5 = (df.iloc[5])
+        # print(pd.concat([i0, blank, i4], axis=0))
+        # print(pd.concat([i1, blank, i5], axis=0))
+        print((pd.concat([pd.concat([i0, blank, i4], axis=0), pd.concat([i1, blank, i5], axis=0)], axis=1)))
+        repeat += 1
+        output["615"][repeat] = []
+        output["665"][repeat] = []
         for col in df:
             if df[col].any():
-                print("*** col ***")
-                for row in df[col]:
-                    print(row > 0)
-    return 0
+                filter = "615"
+                for value in df[col]:
+                    if value > 0:
+                        output[filter][repeat].append(value)
+                    else:
+                        filter = "665"
+    return output
 
 
 def _format_raw_signal(data):
