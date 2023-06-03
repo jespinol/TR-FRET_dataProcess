@@ -50,16 +50,10 @@ def get_dataset_info():
 
 def dataProcess(dataset_info):
     input_data_as_df = parse_dataset(dataset_info)
-    raw_data = format_raw_signal(input_data_as_df)
-    corrected_signal = {SIGNAL_VALUES: {}}
-    for i in range(1, len(raw_data["615"]) + 1):
-        corrected_data = correct_signal(raw_data["615"][i], raw_data["665"][i])
-        corrected_signal[SIGNAL_VALUES][i] = corrected_data
 
-    # raw_signal = _parse_dataset("/Users/jespinol/Library/Mobile Documents/com~apple~CloudDocs/coding/LabProjects/TR-FRET data process/dataProcess/resources/test_csv_desired.csv")
-    # print(raw_signal)
-    # corrected_signal = {SIGNAL_VALUES: _format_raw_signal(raw_signal)}
-    # print(corrected_signal)
+    raw_signal = format_raw_signal(input_data_as_df)
+
+    corrected_signal = {SIGNAL_VALUES: correct_signal(raw_signal)}
 
     normalized_signal = {SIGNAL_VALUES: normalize_signal(corrected_signal)}
 
@@ -75,6 +69,7 @@ def dataProcess(dataset_info):
     fit_results = {SIMPLE_MODEL: fit_curve(dataset_info, normalized_signal, simple_model_equation),
                    QUADRATIC_MODEL: fit_curve(dataset_info, normalized_signal, quadratic_model_equation),
                    COOPERATIVE_MODEL: fit_curve(dataset_info, normalized_signal, hill_equation)}
+
     output_results(dataset_info, corrected_signal, normalized_signal, fit_results)
 
     return
@@ -104,15 +99,14 @@ def format_raw_signal(dfs):
     output = {"615": {}, "665": {}}
     repeat = 0
     for df in dfs:
-        print(df)
-        blank = pd.Series([""])
-        i0 = (df.iloc[0])
-        i1 = (df.iloc[1])
-        i4 = (df.iloc[4])
-        i5 = (df.iloc[5])
-        # print(pd.concat([i0, blank, i4], axis=0))
-        # print(pd.concat([i1, blank, i5], axis=0))
-        print((pd.concat([pd.concat([i0, blank, i4], axis=0), pd.concat([i1, blank, i5], axis=0)], axis=1)))
+        # blank = pd.Series([""])
+        # i0 = (df.iloc[0])
+        # i1 = (df.iloc[1])
+        # i4 = (df.iloc[4])
+        # i5 = (df.iloc[5])
+        # # print(pd.concat([i0, blank, i4], axis=0))
+        # # print(pd.concat([i1, blank, i5], axis=0))
+        # print((pd.concat([pd.concat([i0, blank, i4], axis=0), pd.concat([i1, blank, i5], axis=0)], axis=1)))
         repeat += 1
         output["615"][repeat] = []
         output["665"][repeat] = []
@@ -127,10 +121,27 @@ def format_raw_signal(dfs):
     return output
 
 
+def correct_signal(data):
+    output = {}
+    for i in range(1, len(data["615"]) + 1):
+        data_615 = data["615"][i]
+        data_665 = data["665"][i]
+        repeat_signal = []
+        last_index = len(data_615) - 1
+        alpha = data_665[last_index] / data_615[last_index]
+        first_index_of_donor_plus = len(data_615) // 2
+        for p in range(first_index_of_donor_plus, last_index):
+            m = p - first_index_of_donor_plus
+            corrected = ((data_665[p] - (alpha * data_615[p])) - (data_665[m] - (alpha * data_615[m])))
+            repeat_signal.append(corrected)
+        output[i] = repeat_signal
+    return output
+
+
 def _format_raw_signal(data):
     output = {}
     for i in range(1, len(data["665"]) + 1):
-        output[i] = correct_signal(data["615"][i], data["665"][i])
+        output[i] = _correct_signal(data["615"][i], data["665"][i])
 
     return output
 
@@ -172,7 +183,7 @@ def parse_values_from_file(reader, line):
     return data_arr
 
 
-def correct_signal(data_615, data_665):
+def _correct_signal(data_615, data_665):
     output = []
     last_index = len(data_615) - 1
     alpha = data_665[last_index] / data_615[last_index]
