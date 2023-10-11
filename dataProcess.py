@@ -3,11 +3,12 @@ import re
 
 from modules.curve_fitting import *
 from modules.save_xlsx import *
-import pandas as pd
 
 
 def main():
     print("Program requires csv file(s) with single replicates arranged in a specific format. See README")
+    dataProcess(get_dataset_info())
+    print(f"\n{'*' * 50}\n")
     while True:
         dataProcess(get_dataset_info())
         print(f"\n{'*' * 50}\n")
@@ -19,7 +20,6 @@ def get_dataset_info():
               MAX_CONC: 0,
               CONC_REVERSE: False,
               DIL_FACTOR: 0}
-
     if output[PATH] == "q":
         quit()
 
@@ -55,22 +55,24 @@ def dataProcess(dataset_info):
 
     corrected_signal = {SIGNAL_VALUES: correct_signal(raw_signal)}
 
-    normalized_signal = {SIGNAL_VALUES: normalize_signal(corrected_signal)}
-
     dataset_info[NUM_REPEATS] = len(corrected_signal[SIGNAL_VALUES])
     dataset_info[NUM_DATAPOINTS] = len(next(iter(corrected_signal[SIGNAL_VALUES].values())))
 
+    corrected_signal[STATS] = calculate_signal_statistics(corrected_signal)
+
+    normalized_signal = {SIGNAL_VALUES: normalize_signal(corrected_signal)}
     corrected_signal[CONC] = normalized_signal[CONC] = calculate_concentrations(dataset_info)
     corrected_signal[LOG_CONC] = normalized_signal[LOG_CONC] = convert_conc_to_log(corrected_signal[CONC])
-
-    corrected_signal[STATS] = calculate_signal_statistics(corrected_signal)
     normalized_signal[STATS] = calculate_signal_statistics(normalized_signal)
 
-    fit_results = {SIMPLE_MODEL: fit_curve(dataset_info, normalized_signal, simple_model_equation),
-                   QUADRATIC_MODEL: fit_curve(dataset_info, normalized_signal, quadratic_model_equation),
-                   COOPERATIVE_MODEL: fit_curve(dataset_info, normalized_signal, hill_equation)}
+    fit_results = {SIMPLE_MODEL: fit_curve(normalized_signal, simple_model_equation),
+                   QUADRATIC_MODEL: fit_curve(normalized_signal, quadratic_model_equation),
+                   COOPERATIVE_MODEL: fit_curve(normalized_signal, hill_equation)}
 
     output_results(dataset_info, corrected_signal, normalized_signal, fit_results)
+
+    print(
+        f"kd coop: {fit_results[COOPERATIVE_MODEL][KD][PARAMETER]}, kd simple: {fit_results[SIMPLE_MODEL][KD][PARAMETER]}, kd quad: {fit_results[QUADRATIC_MODEL][KD][PARAMETER]}")
 
     return
 
@@ -198,11 +200,19 @@ def _correct_signal(data_615, data_665):
 
 def normalize_signal(data):
     output = {}
+    global_max = float('-inf')
+    global_min = float('inf')
+    for value in data[STATS][AVERAGE_SIGNAL]:
+        max_value, min_value = value, value
+        if max_value > global_max:
+            global_max = max_value
+        if min_value <= global_min:
+            global_min = min_value
+
     for repeat, values in data[SIGNAL_VALUES].items():
         output[repeat] = []
-        max_value, min_value = max(values), min(values)
         for i in range(len(values)):
-            output[repeat].append((values[i] - min_value) / (max_value - min_value))
+            output[repeat].append((values[i] - global_min) / (global_max - global_min))
 
     return output
 
@@ -241,7 +251,7 @@ def calculate_signal_statistics(data):
         values[i, :] = np.array(data[SIGNAL_VALUES][i + 1])
     averages = (np.mean(values, axis=0)).tolist()
 
-    std_devs_pop = (np.std(values, axis=0, ddof=0)).tolist()
+    std_devs_pop = np.std(values, axis=0, ddof=1, dtype=np.float64).tolist()
     std_errors_mean = (std_devs_pop / np.sqrt(repeat_num)).tolist()
 
     return {AVERAGE_SIGNAL: averages, STD_DEV: std_devs_pop, STD_ERR: std_errors_mean}
