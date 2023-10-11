@@ -15,8 +15,8 @@ from modules.constants import *
 def create_chart(worksheet, model):
     # initialize a chart object, set size, remove legend
     chart = ScatterChart()
-    chart.height = 13.97
-    chart.width = 20.96
+    chart.height = 15.24
+    chart.width = 22.86
     chart.legend = None
     chart.graphical_properties = GraphicalProperties(ln=LineProperties(noFill=True))
     font = Font(typeface="Calibri")
@@ -27,10 +27,10 @@ def create_chart(worksheet, model):
     # y-axis settings
     chart.y_axis.majorGridlines = None
     chart.y_axis.majorTickMark = "in"
-    chart.y_axis.title = "Fraction Bound"
+    chart.y_axis.title = "Normalized fluorescence"
     chart.y_axis.title.tx.rich.p[0].pPr.defRPr = axis_font
     chart.y_axis.scaling.min = 0.0
-    chart.y_axis.scaling.max = 1.0
+    chart.y_axis.scaling.max = 1.1
     chart.y_axis.txPr = RichText(
         p=[Paragraph(pPr=ParagraphProperties(defRPr=axis_label_font), endParaRPr=axis_label_font)])
     chart.y_axis.number_format = "#,##0.0"
@@ -43,7 +43,7 @@ def create_chart(worksheet, model):
     chart.x_axis.title.tx.rich.p[0].pPr.defRPr = axis_font
     chart.x_axis.crosses = "min"
     chart.x_axis.scaling.min = 0.0
-    chart.x_axis.scaling.max = 5.0
+    chart.x_axis.scaling.max = 5.5
     chart.x_axis.txPr = RichText(
         p=[Paragraph(pPr=ParagraphProperties(defRPr=axis_label_font), endParaRPr=axis_label_font)])
     chart.x_axis.number_format = '"10"'
@@ -54,7 +54,7 @@ def create_chart(worksheet, model):
     series = SeriesFactory(y_values, x_values)
     series.errBars = get_error_bars(worksheet)
     series.errBars.spPr = GraphicalProperties(ln=LineProperties(w=25400))
-    series.marker = Marker(size=15, symbol="circle")
+    series.marker = Marker(size=10, symbol="circle")
     series.graphicalProperties.line.noFill = True
     chart.series.append(series)
 
@@ -63,6 +63,7 @@ def create_chart(worksheet, model):
     y_label = f"y_{model}"
     x_values, y_values = find_xy_values_in_worksheet(worksheet, x_label, y_label)
     series = Series(values=y_values, xvalues=x_values)
+    series.graphicalProperties.line.width = 25400
     chart.series.append(series)
 
     # plot a helper column to display exponent in x-axis label
