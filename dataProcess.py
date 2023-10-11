@@ -31,10 +31,11 @@ def get_dataset_info():
         except ValueError:
             print("Invalid input type, please enter an integer value.")
 
-    if re.search(r"[yY]", input("Concentrations NOT in decreasing order? [y/Y for increasing] ")):
+    if re.search(r"[iI]",
+                 input("Are concentrations in DECREASING order? [enter for decreasing or i/I for increasing] ")):
         output[CONC_REVERSE] = True
 
-    if re.search(r"[yY]", input("Samples NOT in column format? [y/Y for row format] ")):
+    if re.search(r"[rR]", input("Are samples in COLUMN format? [enter for column or r/R for row format] ")):
         output[PLATE_FORMAT] = ROW_PLATE_FORMAT
 
     while True:
