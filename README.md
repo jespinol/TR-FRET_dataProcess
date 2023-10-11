@@ -4,8 +4,9 @@ TR-FRET dataProcess is a program designed to process raw TR-FRET data from nucle
 experiments, as performed in [Wesley <i>et al.</i> (Protein Science 2022)](https://doi.org/10.1002/pro.4339).
 
 The program takes in TR-FRET data, performs signal correction, and calculates the binding affinity of the dataset being
-tested, along with goodness-of-fit statistics. It outputs a xlsx file containing corrected data, curve fitting data,
-and a plot of the experimental data and the fitted curve.
+tested, along with goodness-of-fit statistics. It outputs a xlsx file containing corrected data, normalized data, curve
+fitting data,
+and a plot of the experimental data and the fitted curves.
 
 ### Requirements
 
@@ -27,7 +28,8 @@ You can install these required packages using pip. To do so, run the following c
 - The program will prompt you for:
     - a path to the data (single csv file or directory containing multiple files)
     - the maximum concentration in the dataset (in mM)
-    - whether the wells increase or decrease in concentration
+    - whether the wells decrease or increase in concentration
+    - whether the wells are arranged in columns or rows
     - the dilution factor used for the datapoints
 - Once the data is processed, a new dataset can be provided, or type "q" to quit.
 
@@ -37,18 +39,28 @@ the raw data.
 
 ### Raw Data Format
 
-TR-FRET dataProcess requires a specific format for the data. The data must be arranged as shown in the following example
-CSV file containing a dataset with 4 dilutions and donor-only wells. The blank row between emission at 615nM and
-emission at 665nM is essential, and the blank rows at the end are ignored. Note that only column A would be populated in
+TR-FRET dataProcess requires a specific format for the data.
+
+<img src="resources/Plate_format_example.png" alt="" width="240" height="326">
+
+If the user arranges samples for data collection as shown in the figure above, the VICTOR Nivo plate reader can
+output a CSV file that has the correct input format for TR-FRET dataProcess. When exporting results choose "CSV" as the
+export
+format and "Plate format - only results data" as the export type when exporting results.
+
+Alternatively, the data can be arranged in rows. In this format, the first row corresponds to the "- donor" wells and
+the second
+row corresponds to the "+ donor" wells. Similar to the column format, the last wells (furthest to the right) must
+contain
+the "no acceptor" samples. If this arrangement is used, the exported CSV file can be used without modification. However,
+when processing the data enter `r` when prompted for experiment format.
+
+If none of the formats above were used, one can create a new CSV file as described in the following figure. Shown is an
+example CSV file containing a dataset with 4 dilutions. The blank row between emission at 615 nM and
+emission at 665 nM is essential. Other blank cells are ignored. Note that only column A and B would be populated in
 the actual input file.
 
-<img src="resources/CSV_file_example.png" alt="" width="300" height="459">
-
-~~If the user arranges samples for data collection as shown in the following figure, the VICTOR Nivo plate reader can
-output a CSV file that already has the correct format. For data collected in this manner, choose "CSV" as the export
-format and "List format - only results" as the export type when exporting results.~~
-
-<img src="resources/Plate_format_example.png" alt="" width="300" height="408">
+<img src="resources/CSV_file_example.png" alt="" width="300" height="353">
 
 ### License
 
