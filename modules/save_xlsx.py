@@ -23,7 +23,7 @@ def output_results(data_info, signal_corrected, signal_normalized, fit_data):
     write_signal_data(signal_corrected, writer, WS_NAME, row)
 
     # add theoretical data based on models
-    col = 20
+    col = 17
     for model in MODELS:
         fitted_curve_datapoints = calculate_fitted_curve_datapoints(signal_normalized, fit_data, model)
         df_fitted_data = pd.DataFrame(data=fitted_curve_datapoints)
@@ -38,19 +38,20 @@ def output_results(data_info, signal_corrected, signal_normalized, fit_data):
     plot_worksheet = writer.sheets[WS_NAME]
     row = 2
     chart_col = chr(DEFAULT_COL_NUM + data_info[NUM_REPEATS] + ord("A"))
-    fit_col = DEFAULT_COL_NUM + data_info[NUM_REPEATS] + CHART_COL_WIDTH
+    fit_col = DEFAULT_COL_NUM + data_info[NUM_REPEATS]
     for model in MODELS:
         chart = create_chart(plot_worksheet, model)
         plot_worksheet.add_chart(chart, f"{chart_col}{row}")
+        row += CHART_ROW_HEIGHT + 3
 
         # add curve fitting data
         title_cell = plot_worksheet[f"{chr(fit_col + ord('A'))}{row}"]
         title_cell.value = model
         title_cell.font = openpyxl.styles.Font(bold=True)
         df_fit = create_fit_DataFrame(fit_data[model])
-        df_fit.to_excel(writer, sheet_name=WS_NAME, index=False, header=False, startrow=row, startcol=fit_col)
+        df_fit.to_excel(writer, sheet_name=WS_NAME, index=False, header=True, startrow=row, startcol=fit_col)
 
-        row += CHART_ROW_HEIGHT + 2
+        row += 7
 
     writer.close()
 
@@ -112,15 +113,19 @@ def create_signal_DataFrame(signal_data):
             data[column] = signal_data[column]
 
     data = {**{CONC: signal_data[CONC]}, **data}
-
-    return pd.DataFrame(data)
+    df = pd.DataFrame(data)
+    return df
 
 
 def create_fit_DataFrame(fit_data):
-    data = {PARAMETER: [], VALUE: []}
-    for k, v in fit_data.items():
-        data[PARAMETER].append(k)
-        data[VALUE].append(v)
+    data = {PARAMETER: [], VALUE: [], CONF_INT_LOWER: [], CONF_INT_UPPER: [], STD_DEV: [], STD_ERR: []}
+    for param, value in fit_data.items():
+        data[PARAMETER].append(param)
+        data[VALUE].append(value[PARAMETER])
+        data[CONF_INT_LOWER].append(value[CONF_INT_LOWER])
+        data[CONF_INT_UPPER].append(value[CONF_INT_UPPER])
+        data[STD_DEV].append(value[STD_DEV])
+        data[STD_ERR].append(value[STD_ERR])
 
     df = pd.DataFrame(data)
     return df
@@ -129,21 +134,24 @@ def create_fit_DataFrame(fit_data):
 def calculate_fitted_curve_datapoints(signal_data, fit_data, model):
     max_concentration = signal_data[CONC][0] * 1.2
     min_concentration = signal_data[CONC][-1] * 0.8
-    kd = fit_data[model][KD]
+    kd = fit_data[model][KD][PARAMETER]
     model_equation = MODEL_EQUATIONS[model]
 
     fit_x_values = []
     fit_y_values = []
+
     current_x = max_concentration
     while current_x > min_concentration:
         fit_x_values.append(np.log10(current_x))
         if model == COOPERATIVE_MODEL:
-            nH = fit_data[model][NH]
-            bottom = fit_data[model][BOTTOM]
-            top = fit_data[model][TOP]
-            fit_y_values.append(model_equation(current_x, kd, nH, bottom, top))
+            nH = fit_data[model][NH][PARAMETER]
+            y_val = model_equation(current_x, kd, nH)
         else:
-            fit_y_values.append(model_equation(current_x, kd))
+            y_val = model_equation(current_x, kd)
+        fit_y_values.append(y_val)
+        if np.isnan(y_val):
+            fit_x_values = fit_y_values = []
+            break
         current_x *= 0.9
 
     x_values_label = f"x_{model}"
