@@ -1,7 +1,7 @@
 import numpy as np
 
 # input file constant names and default values
-DEFAULT_PATH = "/Users/jespinol/Downloads/TR-FRET/pd/c.csv"
+DEFAULT_PATH = "/Users/jespinol/Downloads/data"
 PATH = "Path to file(s)"
 PLATE_FORMAT = "Plate format"
 COLUMN_PLATE_FORMAT = "Columns"
@@ -44,8 +44,8 @@ def quadratic_model_equation(lt, kd, rt=1):
     return (lt - rl) / (kd + (lt - rl))
 
 
-def hill_equation(lt, ec50, hill_slope, bottom, top):
-    return bottom + ((top - bottom) * np.power(lt, hill_slope)) / (
+def hill_equation(lt, ec50, hill_slope):
+    return np.power(lt, hill_slope) / (
             np.power(ec50, hill_slope) + np.power(lt, hill_slope))
 
 
@@ -53,13 +53,10 @@ MODEL_EQUATIONS = {COOPERATIVE_MODEL: hill_equation, SIMPLE_MODEL: simple_model_
                    QUADRATIC_MODEL: quadratic_model_equation}
 KD = "KD (nM)"
 NH = "nH"
-BOTTOM = "Bottom param"
-TOP = "Top param"
-CONF_INT = "Confidence interval"
 CONF_INT_LOWER = "CI lower bound"
 CONF_INT_UPPER = "CI upper bound"
-STD_DEV_FIT = "Standard deviation"
-STD_ERR_FIT = "Standard error"
+STD_DEV_FIT = "Std deviation"
+STD_ERR_FIT = "Std error"
 
 # constant names related to output file
 WS_NAME = "Data"
