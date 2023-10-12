@@ -48,19 +48,20 @@ output a CSV file that has the correct input format for TR-FRET dataProcess. Whe
 export
 format and "Plate format - only results data" as the export type when exporting results.
 
-Alternatively, the data can be arranged in rows. In this format, the first row corresponds to the "- donor" wells and
-the second
-row corresponds to the "+ donor" wells. Similar to the column format, the last wells (furthest to the right) must
-contain
-the "no acceptor" samples. If this arrangement is used, the exported CSV file can be used without modification. However,
-when processing the data enter `r` when prompted for experiment format.
-
-If none of the formats above were used, one can create a new CSV file as described in the following figure. Shown is an
+If another format was used, one can create a new CSV file as described in the following figure. Shown is an
 example CSV file containing a dataset with 4 dilutions. The blank row between emission at 615 nM and
 emission at 665 nM is essential. Other blank cells are ignored. Note that only column A and B would be populated in
-the actual input file.
+an actual input file.
 
 <img src="resources/CSV_file_example.png" alt="" width="300" height="353">
+
+### Issues
+
+x-axis labels are not created properly. To fix it manually:
+
+- Select "Series 3 Data Labels" for formatting
+- In the format pane, under label contains, deselect "X values" and select "Value from cells"
+- In the range selector type `=Data!$AC$2:$AC$8` or select the appropriate labels under "Helper label" in column AC
 
 ### License
 
