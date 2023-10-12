@@ -31,7 +31,10 @@ def output_results(data_info, signal_corrected, signal_normalized, fit_data):
         col += 3
 
     # add helper series for chart x-axis labels
-    df_helper_data = pd.DataFrame(data={HELPER_X: [-1, 0, 1, 2, 3, 4, 5], HELPER_Y: [0, 0, 0, 0, 0, 0, 0]})
+    df_helper_data = pd.DataFrame(
+        data={HELPER_X: [1e-1, 1e0, 1e1, 1e2, 1e3, 1e4, 1e5], HELPER_Y: [-0.1, -0.1, -0.1, -0.1, -0.1, -0.1, -0.1],
+              HELPER_LABEL: [f"{' ' * 10}-1", f"{' ' * 9}0", f"{' ' * 9}1", f"{' ' * 9}2", f"{' ' * 9}3", f"{' ' * 9}4",
+                             f"{' ' * 9}5"]})
     df_helper_data.to_excel(writer, sheet_name=WS_NAME, index=False, startcol=col)
 
     # add plots of log(concentration) vs. normalized signal including the fitted curve according to each model
@@ -142,7 +145,7 @@ def calculate_fitted_curve_datapoints(signal_data, fit_data, model):
 
     current_x = max_concentration
     while current_x > min_concentration:
-        fit_x_values.append(np.log10(current_x))
+        fit_x_values.append(current_x)
         if model == COOPERATIVE_MODEL:
             nH = fit_data[model][NH][PARAMETER]
             y_val = model_equation(current_x, kd, nH)

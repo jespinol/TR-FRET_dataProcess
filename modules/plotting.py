@@ -8,6 +8,7 @@ from openpyxl.chart.shapes import GraphicalProperties
 from openpyxl.chart.text import RichText
 from openpyxl.drawing.line import LineProperties
 from openpyxl.drawing.text import Font, CharacterProperties, Paragraph, ParagraphProperties
+from openpyxl.chart.axis import ChartLines
 
 from modules.constants import *
 
@@ -19,6 +20,7 @@ def create_chart(worksheet, model):
     chart.width = 22.86
     chart.legend = None
     chart.graphical_properties = GraphicalProperties(ln=LineProperties(noFill=True))
+    chart.plot_area.graphicalProperties = GraphicalProperties(ln=LineProperties(solidFill="868686"))
     font = Font(typeface="Calibri")
     axis_font = CharacterProperties(latin=font, sz=2000)
     axis_label_font = CharacterProperties(latin=font, sz=1800)
@@ -29,7 +31,8 @@ def create_chart(worksheet, model):
     chart.y_axis.majorTickMark = "in"
     chart.y_axis.title = "Normalized fluorescence"
     chart.y_axis.title.tx.rich.p[0].pPr.defRPr = axis_font
-    chart.y_axis.scaling.min = 0.0
+    chart.y_axis.crossesAt = 1e-1
+    chart.y_axis.scaling.min = -0.1
     chart.y_axis.scaling.max = 1.1
     chart.y_axis.txPr = RichText(
         p=[Paragraph(pPr=ParagraphProperties(defRPr=axis_label_font), endParaRPr=axis_label_font)])
@@ -37,24 +40,30 @@ def create_chart(worksheet, model):
     chart.y_axis.majorUnit = 0.2
 
     # x-axis settings
-    chart.x_axis.majorGridlines = None
+    chart.x_axis.majorGridlines = ChartLines()
+    chart.x_axis.majorGridlines.graphicalProperties = GraphicalProperties(ln=LineProperties(solidFill="BFBFBF"))
+    chart.x_axis.minorGridlines = ChartLines()
+    chart.x_axis.minorGridlines.graphicalProperties = GraphicalProperties(ln=LineProperties(solidFill="F2F2F2"))
     chart.x_axis.majorTickMark = "in"
+    chart.x_axis.minorTickMark = "in"
     chart.x_axis.title = "[Ligand] nM"
     chart.x_axis.title.tx.rich.p[0].pPr.defRPr = axis_font
     chart.x_axis.crosses = "min"
-    chart.x_axis.scaling.min = 0.0
-    chart.x_axis.scaling.max = 5.5
+    chart.x_axis.scaling.logBase = 10
+    chart.x_axis.scaling.min = 1e-1
+    chart.x_axis.scaling.max = 1e5
     chart.x_axis.txPr = RichText(
         p=[Paragraph(pPr=ParagraphProperties(defRPr=axis_label_font), endParaRPr=axis_label_font)])
     chart.x_axis.number_format = '"10"'
     chart.x_axis.majorUnit = 1.0
 
     # plot experimental curve as a scatter plot showing only markers
-    x_values, y_values = find_xy_values_in_worksheet(worksheet, LOG_CONC, AVERAGE_SIGNAL)
+    x_values, y_values = find_xy_values_in_worksheet(worksheet, CONC, AVERAGE_SIGNAL)
     series = SeriesFactory(y_values, x_values)
     series.errBars = get_error_bars(worksheet)
-    series.errBars.spPr = GraphicalProperties(ln=LineProperties(w=25400))
+    series.errBars.spPr = GraphicalProperties(ln=LineProperties(w=25400, solidFill="0000FF"))
     series.marker = Marker(size=10, symbol="circle")
+    series.marker.graphicalProperties = GraphicalProperties(solidFill="0000FF", ln=LineProperties(solidFill="0000FF"))
     series.graphicalProperties.line.noFill = True
     chart.series.append(series)
 
@@ -64,6 +73,7 @@ def create_chart(worksheet, model):
     x_values, y_values = find_xy_values_in_worksheet(worksheet, x_label, y_label)
     series = Series(values=y_values, xvalues=x_values)
     series.graphicalProperties.line.width = 25400
+    series.graphicalProperties = GraphicalProperties(ln=LineProperties(solidFill="0000FF"))
     chart.series.append(series)
 
     # plot a helper column to display exponent in x-axis label
@@ -71,14 +81,9 @@ def create_chart(worksheet, model):
     series = SeriesFactory(y_values, x_values)
     series.graphicalProperties.line.noFill = True
     series.dLbls = DataLabelList()
-    for x in range(int(chart.x_axis.scaling.max) + 2):
-        data_label = DataLabel(x)
-        data_label.text = f"{x}"
-        data_label.showCatName = True
-        data_label.showVal = False
-        data_label.position = "b"
-        series.dLbls.dLbl.append(data_label)
-    series.dLbls.numFmt = '"          "0;#'
+    series.dLbls.showCatName = True
+    series.dLbls.dLblPos = "b"
+    series.dLbls.numFmt = '"     "0;#'
     series.dLbls.txPr = RichText(
         p=[Paragraph(pPr=ParagraphProperties(defRPr=axis_superscript_font), endParaRPr=axis_superscript_font)])
     chart.series.append(series)
