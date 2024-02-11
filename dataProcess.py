@@ -1,4 +1,3 @@
-import csv
 import re
 
 from modules.curve_fitting import *
@@ -72,9 +71,6 @@ def dataProcess(dataset_info):
 
     output_results(dataset_info, corrected_signal, normalized_signal, fit_results)
 
-    print(
-        f"kd coop: {fit_results[COOPERATIVE_MODEL][KD][PARAMETER]}, kd simple: {fit_results[SIMPLE_MODEL][KD][PARAMETER]}, kd quad: {fit_results[QUADRATIC_MODEL][KD][PARAMETER]}")
-
     return
 
 
@@ -102,25 +98,17 @@ def format_raw_signal(dfs):
     output = {"615": {}, "665": {}}
     repeat = 0
     for df in dfs:
-        # blank = pd.Series([""])
-        # i0 = (df.iloc[0])
-        # i1 = (df.iloc[1])
-        # i4 = (df.iloc[4])
-        # i5 = (df.iloc[5])
-        # # print(pd.concat([i0, blank, i4], axis=0))
-        # # print(pd.concat([i1, blank, i5], axis=0))
-        # print((pd.concat([pd.concat([i0, blank, i4], axis=0), pd.concat([i1, blank, i5], axis=0)], axis=1)))
         repeat += 1
         output["615"][repeat] = []
         output["665"][repeat] = []
         for col in df:
             if df[col].any():
-                filter = "615"
+                filter_ = "615"
                 for value in df[col]:
                     if value > 0:
-                        output[filter][repeat].append(value)
+                        output[filter_][repeat].append(value)
                     else:
-                        filter = "665"
+                        filter_ = "665"
     return output
 
 
@@ -141,42 +129,6 @@ def correct_signal(data):
     return output
 
 
-def _format_raw_signal(data):
-    output = {}
-    for i in range(1, len(data["665"]) + 1):
-        output[i] = _correct_signal(data["615"][i], data["665"][i])
-
-    return output
-
-
-def _parse_dataset(path):
-    raw_data = {"615": {}, "665": {}}
-    try:
-        # check if input is a directory
-        if os.path.isdir(path):
-            directory_files = os.listdir(path)
-            for file in directory_files:
-                if file.endswith(".csv"):
-                    with open(os.path.join(path, file), "r", encoding='utf-8-sig') as f:
-                        reader = csv.reader(f)
-                        line = next(reader)
-                        raw_data["615"][len(raw_data["615"]) + 1] = parse_values_from_file(reader, line)
-                        line = next(reader)
-                        raw_data["665"][len(raw_data["665"]) + 1] = parse_values_from_file(reader, line)
-        # if not a directory, assume it is a file
-        else:
-            with open(path, "r", encoding='utf-8-sig') as file:
-                reader = csv.reader(file)
-                line = next(reader)
-                raw_data["615"][1] = parse_values_from_file(reader, line)
-                line = next(reader)
-                raw_data["665"][1] = parse_values_from_file(reader, line)
-    except IOError:
-        print("Input directory/file does not exist or does not contain a valid csv file.")
-
-    return raw_data
-
-
 def parse_values_from_file(reader, line):
     data_arr = []
     while line:
@@ -184,19 +136,6 @@ def parse_values_from_file(reader, line):
         line = next(reader, None)
 
     return data_arr
-
-
-def _correct_signal(data_615, data_665):
-    output = []
-    last_index = len(data_615) - 1
-    alpha = data_665[last_index] / data_615[last_index]
-    first_index_of_donor_plus = len(data_615) // 2
-    for p in range(first_index_of_donor_plus, last_index):
-        m = p - first_index_of_donor_plus
-        corrected = ((data_665[p] - (alpha * data_615[p])) - (data_665[m] - (alpha * data_615[m])))
-        output.append(corrected)
-
-    return output
 
 
 def normalize_signal(data):
