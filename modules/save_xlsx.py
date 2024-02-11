@@ -152,7 +152,7 @@ def calculate_fitted_curve_datapoints(signal_data, fit_data, model):
         else:
             y_val = model_equation(current_x, kd)
         fit_y_values.append(y_val)
-        if np.isnan(y_val):
+        if np.any(np.isnan(y_val)):
             fit_x_values = fit_y_values = []
             break
         current_x *= 0.9
